@@ -116,11 +116,12 @@ int main() {
       close(sock_fd); // Child doesn't need the listener
       if (send(new_fd, "Hello, world!", 13, 0) == -1) {
         perror("send");
-        close(new_fd);
-        exit(0);
       }
       close(new_fd);
+      exit(0);
     }
+
+    close(new_fd); // Parent doesn't need this
   }
 
   return 0;
