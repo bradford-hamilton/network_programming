@@ -72,3 +72,5 @@
   - Basically, you’ll want to convert the numbers to Network Byte Order before they go out on the wire, and convert
     them to Host Byte Order as they come in off the wire.
 
+- TCP and UDP header formats:
+![header_formats.png](header_formats.png)
