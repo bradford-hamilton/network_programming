@@ -12,10 +12,13 @@ public:
 
   void accept_connections();
 private:
-  sock_fd m_handle;
-  fd_set master;    // master file descriptor list
-  fd_set read_fds;  // temp file descriptor list for select()
-  int fd_max;       // maximum file descriptor number
+  sock_fd m_handle;  
+  // Master file descriptor list
+  fd_set master;
+  // Temp file descriptor list for select()
+  fd_set read_fds;
+  // Maximum file descriptor number
+  int fd_max;
   char remote_ip[INET6_ADDRSTRLEN];
 };
 

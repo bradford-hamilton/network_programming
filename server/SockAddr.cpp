@@ -29,11 +29,6 @@ SockAddr::~SockAddr()
   freeaddrinfo(m_servinfo);
 }
 
-// const char* SockAddr::get_port() const
-// {
-//   return reinterpret_cast<sockaddr_in*>(m_servinfo)->sin_port;
-// }
-
 struct addrinfo* SockAddr::servinfo() const
 {
   return m_servinfo;
