@@ -12,17 +12,30 @@
 #include <signal.h>
 #include <string>
 #include "SockServer.h"
-#include "SockAddr.h"
 
 void sigchld_handler(int s);
 void* get_in_addr(struct sockaddr* sa); // Get sockaddr, IPv4 or IPv6:
 
-SockServer::SockServer(SockAddr sock_addr)
+SockServer::SockServer(const char* port)
 {
+  struct addrinfo hints;
+
+  memset(&hints, 0, sizeof(hints)); // Make sure the struct is empty
+  hints.ai_family = AF_UNSPEC;      // Don't care IPv4 or IPv6
+  hints.ai_socktype = SOCK_STREAM;  // TCP stream sockets
+  hints.ai_flags = AI_PASSIVE;      // Fill in my IP for me
+
+  int rv = getaddrinfo(nullptr, port, &hints, &m_servinfo);
+  if (rv != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+    // return 1;
+  }
+  // m_servinfo now points to a linked list of 1 or more struct addrinfos
+
   struct addrinfo *p;
 
   // Loop through all the results and bind to the first we can
-  for (p = sock_addr.servinfo(); p != nullptr; p = p->ai_next) {
+  for (p = m_servinfo; p != nullptr; p = p->ai_next) {
     // Get the socket file descriptor
     if ((m_handle = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
       perror("server: socket");
@@ -85,6 +98,11 @@ SockServer::SockServer(SockAddr sock_addr)
   }
 
   printf("server: waiting for connections...\n");
+}
+
+SockServer::~SockServer()
+{
+  freeaddrinfo(m_servinfo);
 }
 
 void SockServer::accept_connections()
