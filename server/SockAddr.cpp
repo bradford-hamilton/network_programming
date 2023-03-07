@@ -33,4 +33,3 @@ struct addrinfo* SockAddr::servinfo() const
 {
   return m_servinfo;
 }
-
