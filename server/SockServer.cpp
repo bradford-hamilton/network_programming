@@ -14,31 +14,15 @@
 #include "SockServer.h"
 #include "SockAddr.h"
 
-void sigchld_handler(int s)
-{
-  int saved_errno = errno;
+void sigchld_handler(int s);
+void* get_in_addr(struct sockaddr* sa); // Get sockaddr, IPv4 or IPv6:
 
-  // waitpid() might overwrite errno, so we save and restore it:
-  while (waitpid(-1, NULL, WNOHANG) > 0);
-
-  errno = saved_errno;
-}
-
-// get sockaddr, IPv4 or IPv6:
-void* get_in_addr(struct sockaddr* sa)
-{
-  if (sa->sa_family == AF_INET) {
-    return &reinterpret_cast<struct sockaddr_in*>(sa)->sin_addr;
-  }
-  return &reinterpret_cast<struct sockaddr_in6*>(sa)->sin6_addr;
-}
-
-SockServer::SockServer(SockAddr inet_addr)
+SockServer::SockServer(SockAddr sock_addr)
 {
   struct addrinfo *p;
 
   // Loop through all the results and bind to the first we can
-  for (p = inet_addr.servinfo(); p != NULL; p = p->ai_next) {
+  for (p = sock_addr.servinfo(); p != NULL; p = p->ai_next) {
     // Get the socket file descriptor
     if ((m_handle = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
       perror("server: socket");
@@ -111,7 +95,8 @@ void SockServer::accept_connections()
     exit(1);
   }
 
-  char buf[256];  // Buffer for client data
+  // Buffer for client data
+  char buf[256];
   int n_bytes;
 
   // Run through existing connections looking for data to read
@@ -143,7 +128,7 @@ void SockServer::accept_connections()
           } else {
             perror("recv");
           }
-          close(i); // Buh-bye
+          close(i);           // Buh-bye
           FD_CLR(i, &master); // Remove from master set
         } else {
           // Got some data from the client
@@ -161,4 +146,23 @@ void SockServer::accept_connections()
       }
     }
   }
+}
+
+void sigchld_handler(int s)
+{
+  int saved_errno = errno;
+
+  // waitpid() might overwrite errno, so we save and restore it:
+  while (waitpid(-1, NULL, WNOHANG) > 0);
+
+  errno = saved_errno;
+}
+
+// get sockaddr, IPv4 or IPv6:
+void* get_in_addr(struct sockaddr* sa)
+{
+  if (sa->sa_family == AF_INET) {
+    return &reinterpret_cast<struct sockaddr_in*>(sa)->sin_addr;
+  }
+  return &reinterpret_cast<struct sockaddr_in6*>(sa)->sin6_addr;
 }
