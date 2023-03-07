@@ -22,7 +22,7 @@ SockServer::SockServer(SockAddr sock_addr)
   struct addrinfo *p;
 
   // Loop through all the results and bind to the first we can
-  for (p = sock_addr.servinfo(); p != NULL; p = p->ai_next) {
+  for (p = sock_addr.servinfo(); p != nullptr; p = p->ai_next) {
     // Get the socket file descriptor
     if ((m_handle = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
       perror("server: socket");
@@ -51,7 +51,7 @@ SockServer::SockServer(SockAddr sock_addr)
   // freeaddrinfo(servinfo); // All done with this structure
 
   // If we got here, it means we didn't get bound
-  if (p == NULL) {
+  if (p == nullptr) {
     fprintf(stderr, "server: failed to bind\n");
     exit(1);
   }
@@ -79,7 +79,7 @@ SockServer::SockServer(SockAddr sock_addr)
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = SA_RESTART;
 
-  if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+  if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
     perror("sigaction");
     exit(1);
   }
@@ -90,7 +90,7 @@ SockServer::SockServer(SockAddr sock_addr)
 void SockServer::accept_connections()
 {
   read_fds = master; // Copy it
-  if (select(fd_max+1, &read_fds, NULL, NULL, NULL) == -1) {
+  if (select(fd_max+1, &read_fds, nullptr, nullptr, nullptr) == -1) {
     perror("select");
     exit(1);
   }
@@ -153,7 +153,7 @@ void sigchld_handler(int s)
   int saved_errno = errno;
 
   // waitpid() might overwrite errno, so we save and restore it:
-  while (waitpid(-1, NULL, WNOHANG) > 0);
+  while (waitpid(-1, nullptr, WNOHANG) > 0);
 
   errno = saved_errno;
 }

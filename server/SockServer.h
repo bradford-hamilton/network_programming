@@ -8,7 +8,7 @@ typedef int sock_fd;
 
 class SockServer {
 public:
-  SockServer(SockAddr inet_addr);
+  SockServer(SockAddr sock_addr);
 
   void accept_connections();
 private:
