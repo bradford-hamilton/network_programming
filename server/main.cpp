@@ -7,7 +7,7 @@ int main() {
   SockServer srv {s_addr};
 
   while (1) {
-    srv.accept_conn();
+    srv.accept_connections();
   }
 
   return 0;

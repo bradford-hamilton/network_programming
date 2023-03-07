@@ -10,18 +10,13 @@ class SockServer {
 public:
   SockServer(SockAddr inet_addr);
 
-  void accept_conn();
+  void accept_connections();
 private:
   sock_fd m_handle;
+  fd_set master;    // master file descriptor list
+  fd_set read_fds;  // temp file descriptor list for select()
+  int fd_max;       // maximum file descriptor number
   char remote_ip[INET6_ADDRSTRLEN];
 };
 
 #endif // _SOCK_SERVER_H_
-
-// Order of system calls for the TCP server:
-
-// getaddrinfo();
-// socket();
-// bind();
-// listen();
-// accept()

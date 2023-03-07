@@ -80,6 +80,16 @@ SockServer::SockServer(SockAddr inet_addr)
     exit(1);
   }
 
+  // Clear master and temp sets
+  FD_ZERO(&master);
+  FD_ZERO(&read_fds);
+
+  // Add the m_handle listener to the master set
+  FD_SET(m_handle, &master);
+
+  // Keep track of the biggest file descriptor, which so far, is this one
+  fd_max = m_handle;
+
   struct sigaction sa;
   sa.sa_handler = sigchld_handler; // Reap all dead processes
   sigemptyset(&sa.sa_mask);
@@ -93,33 +103,62 @@ SockServer::SockServer(SockAddr inet_addr)
   printf("server: waiting for connections...\n");
 }
 
-void SockServer::accept_conn()
+void SockServer::accept_connections()
 {
-  struct sockaddr_storage their_addr;
-  socklen_t sin_size = sizeof(their_addr);
-  // The accept() call: someone far far away will try to connect() to your machine on a
-  // port that you are listen()ing on. Their connection will be queued up waiting to be
-  // accept()ed. You call accept() and you tell it to get the pending connection. It’ll
-  // return to you a brand new socket file descriptor to use for this single connection.
-  // The original one is still listening for more new connections, and the newly created
-  // one is finally ready to send() and recv().
-  int new_fd = accept(m_handle, (struct sockaddr*)&their_addr, &sin_size);
-  if (new_fd == -1) {
-    perror("accept");
-    // continue;
+  read_fds = master; // Copy it
+  if (select(fd_max+1, &read_fds, NULL, NULL, NULL) == -1) {
+    perror("select");
+    exit(1);
   }
 
-  inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr*)&their_addr), remote_ip, sizeof(remote_ip));
-  printf("server: got connection from %s\n", remote_ip);
+  char buf[256];  // Buffer for client data
+  int n_bytes;
 
-  if (!fork()) { // This is the child process
-    close(m_handle); // Child doesn't need the listener
-    if (send(new_fd, "Hello, world!", 13, 0) == -1) {
-      perror("send");
+  // Run through existing connections looking for data to read
+  for (auto i = 0; i <= fd_max; i++) {
+    // We found one:
+    if (FD_ISSET(i, &read_fds)) {
+      if (i == m_handle) {
+        // Handle new connection:
+        struct sockaddr_storage remote_addr;
+        socklen_t addr_len = sizeof(remote_addr);
+        
+        int new_fd = accept(m_handle, (struct sockaddr*)&remote_addr, &addr_len);
+        if (new_fd == -1) {
+          perror("accept");
+        } else {
+          FD_SET(new_fd, &master); // Add to master set
+          if (new_fd > fd_max) {   // Keep track of the max
+            fd_max = new_fd;
+          }
+          printf("selectserver: new connection from %s on socket %d\n", inet_ntop(remote_addr.ss_family, get_in_addr((struct sockaddr*)&remote_addr), remote_ip, INET6_ADDRSTRLEN), new_fd);
+        }
+      } else {
+        // Handle data from client
+        if ((n_bytes = recv(i, buf, sizeof(buf), 0)) <= 0) {
+          // Got error or connection closed by client
+          if (n_bytes == 0) {
+            // Connection closed
+            printf("selectserver: socket %d hung up\n", i);
+          } else {
+            perror("recv");
+          }
+          close(i); // Buh-bye
+          FD_CLR(i, &master); // Remove from master set
+        } else {
+          // Got some data from the client
+          for (auto j = 0; j <= fd_max; j++) {
+            // Send to everyone except the listener and ourselves
+            if (FD_ISSET(j, &master)) {
+              if (j != m_handle && j != i) {
+                if (send(j, buf, n_bytes, 0) == -1) {
+                  perror("send");
+                }
+              }
+            }
+          }
+        }
+      }
     }
-    close(new_fd);
-    exit(0);
   }
-
-  close(new_fd); // Parent doesn't need this
 }
